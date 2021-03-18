@@ -1,0 +1,717 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="https://img.wclblog.top/avatar.jpg">
+  <link rel="icon" type="image/png" href="https://img.wclblog.top/avatar.jpg">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="魏成龙">
+  <meta name="keywords" content="">
+  <title>Spring源码品读 - 小飞龙</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/an-old-hope.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":true,"baidu":"ea866f9e8e8970fa598ac9b8a359569a","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>小飞龙</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('https://img.wclblog.top/banner.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="Spring源码品读">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      魏成龙
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-12-31 23:26" pubdate>
+        2020年12月31日 晚上
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.6k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      28
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Spring源码品读</h1>
+            
+            <div class="markdown-body">
+              <h2 id="Spring核心接口和类"><a href="#Spring核心接口和类" class="headerlink" title="Spring核心接口和类"></a>Spring核心接口和类</h2><blockquote>
+<p>spring框架解决了一个非常关键的问题，它可以让你将对象之间的关系转而用配置文件来进行管理</p>
+</blockquote>
+<ul>
+<li>这便是它赖以生存的依赖注入机制，让对象之间的依赖关系在Spring的IoC容器中管理。</li>
+<li>通过把对象包装在Bean中以达到管理对象和额外操作的目的</li>
+</ul>
+<h3 id="Bean与BeanDefinition"><a href="#Bean与BeanDefinition" class="headerlink" title="Bean与BeanDefinition"></a>Bean与BeanDefinition</h3><h4 id="Bean是Spring的一等公民"><a href="#Bean是Spring的一等公民" class="headerlink" title="Bean是Spring的一等公民"></a>Bean是Spring的一等公民</h4><ul>
+<li><p>Bean的本质就是Java对象，只是这个对象的生命周期由容器来管理</p>
+<p>用户可以根据自己的业务需求去定义一个java类，通过配置文件/配置类或者配置相关的注解等Spring框架能理解的方式告知Spring将该java类给管理起来，他就成为了Spring容器中的一个bean</p>
+</li>
+<li><p>不需要为了创建Bean而在原来的java类上添加任何额外的限制</p>
+</li>
+<li><p>对Java对象的控制方式体现在配置上</p>
+</li>
+</ul>
+<h4 id="BeanDefinition-——Bean的定义"><a href="#BeanDefinition-——Bean的定义" class="headerlink" title="BeanDefinition ——Bean的定义"></a>BeanDefinition ——Bean的定义</h4><p><strong>根据配置，生成用来描述Bean的BeanDefinition</strong></p>
+<p>常用属性：</p>
+<ul>
+<li>作用范围scope(@Scope)</li>
+<li>懒加载lazy-init(@Lazy)：决定Bean实例是否延迟加载</li>
+<li>首选primary(@Primary)：设置true的bean会是优先的实现类</li>
+<li>factory-bean和factory-method(@Configuration和@Bean)</li>
+</ul>
+<h5 id="容器初始化主要做的事情"><a href="#容器初始化主要做的事情" class="headerlink" title="容器初始化主要做的事情"></a>容器初始化主要做的事情</h5><img src="https://img.wclblog.top/images/Spring源码品读/spring01.png" srcset="/img/loading.gif">
+
+<ul>
+<li>解析配置</li>
+<li>定位与注册对象</li>
+</ul>
+<p>在容器初始化或者bean实例首次使用的时候，容器会按照这些BeanIDifinition实例属性的指示将BeanDifinition对应的Bean实例创建出来，这主要取决于Bean的创建策略，是立即加载还是延迟加载。</p>
+<h5 id="源码探究"><a href="#源码探究" class="headerlink" title="源码探究"></a>源码探究</h5><img src="https://img.wclblog.top/images/Spring源码品读/spring02.png" srcset="/img/loading.gif">
+
+<p>该接口实在spring-beans这个模块中，这个模块中存放的是spring简单容器相关的接口和类。</p>
+<p>BeanDefinition继承了AttributeAccessor和BeanMetadataElement这两个接口，Spring中提供了大量的各种接口，每种接口都有不同的能力，某个类实现了某个接口也就相当于承诺拥有了某种能力。</p>
+<p><strong>AttributeAccessor</strong></p>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring03.png" srcset="/img/loading.gif">
+
+<p>这个接口定义了最基本的对任意对象元数据的修改或者获取方式，用在BeanDefinition里主要就是用来获取BeanDefinition的属性，并对这些属性进行操作</p>
+<p><strong>BeanMetadataElement</strong></p>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring04.png" srcset="/img/loading.gif">
+
+<p>这个接口提供了一个getSource方法，用来传输一个可配置的元对象，于BeanDefinition里来讲就是通过getSource方法返回BeanDefinition这个Class对象本身。</p>
+<p>针对BeanDefinition来讲，主要向Spring容器描述了某个Bean的配置信息</p>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring04.png" srcset="/img/loading.gif">
+
+<p>像是否延迟加载isLazyInit();获取作用范围getScope()等等，在BeanDefinition都有相应的定义。</p>
+<h5 id="AbstractBeanDefinition"><a href="#AbstractBeanDefinition" class="headerlink" title="AbstractBeanDefinition"></a>AbstractBeanDefinition</h5> <img src="https://img.wclblog.top/images/Spring源码品读/spring06.png" srcset="/img/loading.gif">
+
+<p>在BeanDefinition家族成员中有很多，我这里只列举一些比较常见的类</p>
+<p>AbstractBeanDefinition是BeanDefinition实现类的基类</p>
+<p>根据不同的使用场景，又分为了RootBeanDefinition,GenericBeanDefinition,ChildBeanDefinition</p>
+<p>RootBeanDefinition: 可以单独作为一个BeanDefinition，也可以作为其他BeanDefinition的父类，但是不可以作为其他BeanDefinition的子类。</p>
+ <img src="https://img.wclblog.top/images/Spring源码品读/Spring07.png" srcset="/img/loading.gif">
+
+<p>可以看到在setParentName方法里一旦设置parentName就会抛出异常。</p>
+<p><strong>Spring里面定义的Bean之间的继承关系是通过在BeanDefinition设置parentName属性来决定的。</strong></p>
+ <img src="https://img.wclblog.top/images/Spring源码品读/Spring08.png" srcset="/img/loading.gif">
+
+<p>从RootBeanDefinition源码介绍里可以看到RootBeanDefinition通常用于在运行时接收多个BeanDefinition合并起来的信息。一般情况下配置文件里的bean标签会被解析成RootBeanDefinition。</p>
+<p>在Spring2.5之后，Spring引入了一个GenericBeanDefinition，将RootBeanDefinition和ChildBeanDefinition取代了。但是在合并属性的时候，还是会使用RootBeanDefinition来接收。</p>
+<p>ChildBeanDefinition: 必须要依赖一个父的BeanDefinition不可以单独存在，不过已经被GenericBeanDefinition完全取代，不需要去学习。</p>
+<h6 id="GenericBeanDefinition"><a href="#GenericBeanDefinition" class="headerlink" title="GenericBeanDefinition"></a>GenericBeanDefinition</h6><p>GenericBeanDefinition是Spring2.5以后新增加的Bean文件定义配置类，是RootBeanDefinition和ChildBeanDefinition更好的替代方案。</p>
+<p>除了具有其他BeanDefinition的特征外，还具备了parentName属性，方便程序在运行时设定parentBeanDefinition</p>
+<h3 id="SpringIoc容器"><a href="#SpringIoc容器" class="headerlink" title="SpringIoc容器"></a>SpringIoc容器</h3><blockquote>
+<p>SpringIoc容器是一个管理Bean的容器，在Spring的定义中要求所有的容器都要实现接口BeanFactory</p>
+</blockquote>
+<h4 id="BeanFactory"><a href="#BeanFactory" class="headerlink" title="BeanFactory"></a>BeanFactory</h4><p>BeanFactory位于org.springframework.beans.factory包下，是一个顶级的容器接口</p>
+<p>在这个接口下，定义了一个<code>FACTORY_BEAN_PREFIX</code>的变量，该变量主要用于获取FactoryBean的实例</p>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring09.png" srcset="/img/loading.gif">
+
+<h5 id="BeanFacotry和FactoryBean-的区别？"><a href="#BeanFacotry和FactoryBean-的区别？" class="headerlink" title="BeanFacotry和FactoryBean 的区别？"></a>BeanFacotry和FactoryBean 的区别？</h5><p><strong>BeanFactory</strong></p>
+<p>BeanFactory是Spring容器的根接口定义了Bean工厂的最基础的功能特性。比如：<code>Object getBean(String name) throws BeansException;</code>根据bean名字从容器中获取bean实例等等。</p>
+<p>BeanFactory是一个管理Bean的容器，Spring生成的bean都是由BeanFactory的实现类来管理的。</p>
+<p><strong>FactoryBean</strong></p>
+<p>FactoryBean也是接口，根据<code>T getObject() throws Exception;</code>用户可以使用一套比较复杂的逻辑来生成Bean。</p>
+<p>Factory本质也是一个Bean，但是这个bean不是用来注入到其他地方来使用的，而他的作用是用来生成一些普通的bean的，实现了这个接口之后，spring容器在初始化时，会把实现这个接口的Bean取出来，然后使用Bean里面的getObject方法来生成我们想要的Bean，当然那些生成Bean的业务逻辑也要写在getObject方法中。</p>
+<h4 id="简单容器"><a href="#简单容器" class="headerlink" title="简单容器"></a>简单容器</h4><p>Spring的Ioc主要分为两个路线，一个是以BeanFactory为主的简单容器，一个是以ApplicationContext为主的高级容器。</p>
+<p>ApplicationContext应用上下文高级容器也是我们广发使用的类型，相对于BeanFactory而言高级容器新增了很多面向实际应用的功能，让原本在BeanFactory中通过编码实现的功能简化到用配置即可完成。</p>
+<h5 id="BeanFactory-1"><a href="#BeanFactory-1" class="headerlink" title="BeanFactory"></a>BeanFactory</h5><img src="https://img.wclblog.top/images/Spring源码品读/spring10.png" srcset="/img/loading.gif">
+
+<p>根据程序设计的单一原则，其实每一个较顶层接口都是单一职责的，只提供某一方面的功能。</p>
+<h6 id="ListableBeanFactory"><a href="#ListableBeanFactory" class="headerlink" title="ListableBeanFactory"></a>ListableBeanFactory</h6><blockquote>
+<p>该接口的方法可以以列表的形式提供Bean的相关信息，这个接口最大的特点就是可以批量列出工厂生产的实例信息</p>
+</blockquote>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring11.png" srcset="/img/loading.gif">
+
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">getBeanDefinitionCount</span><span class="hljs-params">()</span></span>; <span class="hljs-comment">//获取BeanDefinition总数</span><br>String[] getBeanDefinitionNames(); <span class="hljs-comment">//获取BeanDefinition名字的数组列表</span><br>String[] getBeanNamesForType(ResolvableType type);<span class="hljs-comment">//通过指定类型获取所有Bean名字</span><br><span class="hljs-comment">//....</span><br></code></pre></div></td></tr></table></figure>
+<h6 id="AutowireCapableBeanFactory"><a href="#AutowireCapableBeanFactory" class="headerlink" title="AutowireCapableBeanFactory"></a>AutowireCapableBeanFactory</h6><blockquote>
+<p>在spring中的@Autowired 自动装配的逻辑就是通过该接口的<code>Object resolveDependency()</code>方法来实现的依赖注入。</p>
+</blockquote>
+<p>在该接口中定义了五种装配策略</p>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring12.png" srcset="/img/loading.gif">
+
+<p>其中<code>AUTOWIRE_AUTODETECT</code>已经在Spring3.0中被废弃掉了。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">int</span> AUTOWIRE_NO = <span class="hljs-number">0</span>; <span class="hljs-comment">//没有自动装配</span><br><span class="hljs-keyword">int</span> AUTOWIRE_BY_NAME = <span class="hljs-number">1</span>; <span class="hljs-comment">//根据名称自动装配</span><br><span class="hljs-keyword">int</span> AUTOWIRE_BY_TYPE = <span class="hljs-number">2</span>; <span class="hljs-comment">//根据类型自动装配</span><br><span class="hljs-keyword">int</span> AUTOWIRE_CONSTRUCTOR = <span class="hljs-number">3</span>; <span class="hljs-comment">//根据构造函数自动装配</span><br></code></pre></div></td></tr></table></figure>
+<p>对于<code>@Autowired</code>标签来讲，其自动装配策略用的是<code>AUTOWIRE_BY_TYPE</code>根据类型自动装配</p>
+<h4 id="高级容器"><a href="#高级容器" class="headerlink" title="高级容器"></a>高级容器</h4><div class="note note-success">
+            <p>Spring高级容器均实现了ApplicationContext这个接口</p><p>为了区别于简单容器，高级容器通常被称之为Context，即上下文。</p>
+          </div>
+
+<blockquote>
+<p>在我们使用SpringIoc容器的时候，与我们接触的绝大多数都是ApplicationContext接口的实现类。</p>
+<p>BeanFactory是Spring的基础设施，面向Spring框架自身，而ApplicationContext面向的是使用Spring框架的开发者。</p>
+</blockquote>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring13.png" srcset="/img/loading.gif">
+
+<p>进入到ApplicationContext，我们可以看到Application之所以被称为高级容器，是因为它比BeanFactory多了更多的功能，因为它继承了多个接口。</p>
+<p><strong>首先我们看到它继承了EnvironmentCapable这个接口</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">EnvironmentCapable</span> </span>&#123;<br><br>	<span class="hljs-comment">/**</span><br><span class="hljs-comment">	 * Return the &#123;<span class="hljs-doctag">@link</span> Environment&#125; associated with this component.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-function">Environment <span class="hljs-title">getEnvironment</span><span class="hljs-params">()</span></span>;<br><br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>在这个接口里面我们看到只有一个<code>getEnvironment()</code>方法，该方法主要用来获取Environment。</p>
+<p>说白了其实就是获取一些启动参数。</p>
+<p><strong>此外，他还继承了ListableBeanFactory接口</strong></p>
+<p>即可以通过列表的方式来管理Bean</p>
+<p><strong>同时，还实现了HierarchicalBeanFactory接口</strong></p>
+<p>即可以支持多层级的容器，来实现对每一层Bean的管理</p>
+<p>除此之外，还继承了MessageSource, ApplicationEventPublisher, ResourcePatternResolver诸多接口</p>
+<p><strong>ResourcePatternResolver</strong></p>
+<p>这个接口可以用来加载资源文件的。</p>
+<p><strong>MessageSource</strong></p>
+<p>用来管理一些Message，实现国际化的功能</p>
+<p><strong>ApplicationEventPublisher</strong></p>
+<p>继承该接口，也就意味着ApplicationContext具备事件发布的能力</p>
+<blockquote>
+<p>ApplicationContext容器通过ApplicationEvent类和ApplicationListener接口进行事件处理，如果将实现ApplicationListener接口的Bean注册到容器中时，每次我们通过ApplicationContext发布的ApplicationEvent都会通知到注册的Listener中</p>
+<p>这就是标准的观察者设计者模式</p>
+</blockquote>
+<h5 id="ApplicationContext常用容器"><a href="#ApplicationContext常用容器" class="headerlink" title="ApplicationContext常用容器"></a>ApplicationContext常用容器</h5><p>传统的基于XML配置的经典容器</p>
+<ul>
+<li>FileSystemXmlApplicationContext：从文件系统加载配置</li>
+<li>ClassPathXmlApplicationContext：从classpath加载配置</li>
+<li>XmlWebApplicationContext：用于Web应用程序的容器</li>
+</ul>
+<p>目前比较流行的容器</p>
+<ul>
+<li>AnnotationConfigServletWebServerApplicationContext</li>
+<li>AnnotationConfigReactiveWebServerApplicationContext</li>
+<li>AnnotationConfigApplicationContext</li>
+</ul>
+<div class="note note-info">
+            <p>他们都具备了refresh()的大致功能</p><ul><li>容器初始化、配置解析</li><li>BeanFactoryPostProcessor和BeanPostProcessor的注册和激活</li><li>国际化配置</li><li>…..</li></ul>
+          </div>
+
+<img src="https://img.wclblog.top/images/Spring源码品读/spring14.png" srcset="/img/loading.gif">
+
+<p>回到ApplicationContext中，我们可以看到它里面的方法时只读的，也就是都是以get来打头的，即只提供get操作。 因此我们需要子接口来给Application提供可配置的能力，该接口便是<strong>ConfigrableApplicationContext</strong></p>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring15.png" srcset="/img/loading.gif">
+
+<p>它继承了Lifecycle接口，进入到这个接口中</p>
+<img src="https://img.wclblog.top/images/Spring源码品读/spring16.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>这个接口中提供了stop、start等方法，用于对生命周期的管理。</p>
+</blockquote>
+<p>同时继承了Closeable，这个接口时jdk提供的接口，用于容器关闭的时候释放相应的资源。</p>
+<div class="note note-primary">
+            <p>ConfigrableApplicationContext 主要提供了refresh和close方法，具备启动刷新以及关闭应用上下文的能力，而这里的refresh方法，就是前面所提到的ApplicationContext主流实现容器都需要做的事情。</p><p>在ApplicationContext关闭的情况下，refresh可以重新启动容器</p><p>而在启动的情况下，调用refresh还可以清除缓存，并重新装载配置信息</p><p>具体的方法实现是在实现了该接口的AbstractApplicationContext抽象类中。</p>
+          </div>
+
+<p><strong>AbstractApplicationContext</strong></p>
+<blockquote>
+<p>AbstractApplicationContext通过组合将众多容易变动的功能逻辑，代理给他的一些成员变量来实现，最后再使用模板方法模式，让子类为父类提供一些函数的支持或者设置替换上述的父类成员变量，从而实现了对扩展开放，对修改封闭的设计原则，也就是开闭原则。为SpringFramework提供了灵活性大，并且可扩展性强的架构支撑。</p>
+</blockquote>
+<p>其中的refresh方法便是模板方法模式最好的实现。</p>
+<h4 id="Resource"><a href="#Resource" class="headerlink" title="Resource"></a>Resource</h4><div class="note note-info">
+            <p>在java中，资源可以被抽象成URL，我们可以解析Url中的协议来处理不同资源的操作逻辑。</p><p>而Spring将对物理资源的访问方式，抽象成Resource</p>
+          </div>
+
+<img src="https://img.wclblog.top/images/Spring源码品读/spring17.png" srcset="/img/loading.gif">
+
+<p>在该接口中定义了对资源的基本操作。Resource接口继承了InputStreamSource接口</p>
+<p>InputStreamSource只提供了<code>getInputStream()</code>方法，该方法返回一个InputStream实例，即资源流。</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/%E6%A1%86%E6%9E%B6/">框架</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/%E6%A1%86%E6%9E%B6/spring/">spring</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/spring/">spring</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E6%BA%90%E7%A0%81%E5%93%81%E8%AF%BB/">源码品读</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/01/01/%E7%BA%BF%E7%A8%8B%E6%B1%A0%E5%AD%A6%E4%B9%A0%E6%80%BB%E7%BB%93/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">线程池学习总结</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <div id="vcomments"></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('vcomments', function() {
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', function () {
+        new Valine({
+          el: "#vcomments",
+          app_id: "Tg2ajJ6eSMKNI82wP8fRCAiY-gzGzoHsz",
+          app_key: "2ywbWiss2lw2Ho2lSNAFc01z",
+          placeholder: "说点什么",
+          path: window.location.pathname,
+          avatar: "retro",
+          meta: ["nick","mail","link"],
+          pageSize: "10",
+          lang: "zh-CN",
+          highlight: true,
+          recordIP: true,
+          serverURLs: "",
+        });
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the
+    <a target="_blank" href="https://valine.js.org" rel="nofollow noopener noopener">comments powered by Valine.</a>
+  </noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+  <div class="col-lg-7 mx-auto nopadding-x-md">
+    <div class="container custom post-custom mx-auto">
+      <img src="https://https://imgtu.com/i/6gqCWD" srcset="/img/loading.gif" class="rounded mx-auto d-block mt-5" style="width:150px; height:150px;">
+    </div>
+  </div>
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+    
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?ea866f9e8e8970fa598ac9b8a359569a";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>

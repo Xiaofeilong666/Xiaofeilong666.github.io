@@ -1,0 +1,688 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="https://img.wclblog.top/avatar.jpg">
+  <link rel="icon" type="image/png" href="https://img.wclblog.top/avatar.jpg">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="魏成龙">
+  <meta name="keywords" content="">
+  <title>深入理解ThreadLocal - 小飞龙</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/an-old-hope.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":true,"baidu":"ea866f9e8e8970fa598ac9b8a359569a","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>小飞龙</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('https://img.wclblog.top/banner.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="深入理解ThreadLocal">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      魏成龙
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-01-01 16:23" pubdate>
+        2021年1月1日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.1k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      25
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">深入理解ThreadLocal</h1>
+            
+            <div class="markdown-body">
+              <h2 id="ThreadLocal使用场景"><a href="#ThreadLocal使用场景" class="headerlink" title="ThreadLocal使用场景"></a>ThreadLocal使用场景</h2><ul>
+<li>每个线程需要一个独享的对象（通常时工具类，典型需要使用的类有SimpleDateFormat和Random）</li>
+<li>每个线程内需要保存全局变量（例如在拦截器中获取用户信息），可以让不同方法直接使用，避免参数传递的麻烦。</li>
+</ul>
+<h3 id="场景一：每个线程需要一个独享对象"><a href="#场景一：每个线程需要一个独享对象" class="headerlink" title="场景一：每个线程需要一个独享对象"></a>场景一：每个线程需要一个独享对象</h3><p>每个Thread内有自己的实例副本，不共享</p>
+<p>案例1，通过多线程并行执行打印1000次日期对象，并格式化为<code>yyyy-MM-dd hh:mm:ss</code></p>
+<p>方法1： </p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThreadLocalTest01</span> </span>&#123;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">1000</span>; i++) &#123;<br>            <span class="hljs-keyword">int</span> finalI = i;<br>            threadPool.submit(<span class="hljs-keyword">new</span> Runnable() &#123;<br>                <span class="hljs-meta">@Override</span><br>                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>                    String date = <span class="hljs-keyword">new</span> ThreadLocalTest01().date(finalI);<br>                    System.out.println(date);<br>                &#125;<br>            &#125;);<br>        &#125;<br>        threadPool.shutdown();<br><br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">date</span><span class="hljs-params">(<span class="hljs-keyword">int</span> seconds)</span> </span>&#123;<br>        Date date = <span class="hljs-keyword">new</span> Date(<span class="hljs-number">1000</span> * seconds);<br>        SimpleDateFormat dateFormat = <span class="hljs-keyword">new</span> SimpleDateFormat(<span class="hljs-string">&quot;yyyy-MM-dd hh:mm:ss&quot;</span>);<br><br>        <span class="hljs-keyword">return</span> dateFormat.format(date);<br>    &#125;<br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ExecutorService threadPool = Executors.newFixedThreadPool(<span class="hljs-number">10</span>);<br><br>&#125;<br><br></code></pre></div></td></tr></table></figure>
+<p>从这个方法中我们可以看出，每次执行任务都需要创建一个SimpleDateFormat对象，这样我们相当于需要创建一千次SimpleDateFormat对象，造成一些没有必要的性能开销。</p>
+<p>方法二：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThreadLocalTest01</span> </span>&#123;<br><br><br>    <span class="hljs-keyword">static</span> SimpleDateFormat dateFormat = <span class="hljs-keyword">new</span> SimpleDateFormat(<span class="hljs-string">&quot;yyyy-MM-dd hh:mm:ss&quot;</span>);<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">1000</span>; i++) &#123;<br>            <span class="hljs-keyword">int</span> finalI = i;<br>            threadPool.submit(<span class="hljs-keyword">new</span> Runnable() &#123;<br>                <span class="hljs-meta">@Override</span><br>                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>                    String date = <span class="hljs-keyword">new</span> ThreadLocalTest01().date(finalI);<br>                    System.out.println(date);<br>                &#125;<br>            &#125;);<br>        &#125;<br>        threadPool.shutdown();<br><br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">date</span><span class="hljs-params">(<span class="hljs-keyword">int</span> seconds)</span> </span>&#123;<br>        String format = <span class="hljs-keyword">null</span>;<br>        Date date = <span class="hljs-keyword">new</span> Date(<span class="hljs-number">1000</span> * seconds);<br>        <span class="hljs-keyword">synchronized</span> (ThreadLocalTest01.class)&#123;<br>            format = dateFormat.format(date);<br>        &#125;<br>        <span class="hljs-keyword">return</span> format;<br><br>    &#125;<br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ExecutorService threadPool = Executors.newFixedThreadPool(<span class="hljs-number">10</span>);<br><br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>上面这种方式虽然解决了对象反复创建带来的资源浪费问题，但是把对象抽离成共享静态变量难免产生线程安全问题，所以我们通过synchronized同步锁，让每一个线程排队等待，这样又产生了一个新的问题，就是同步等待带来的性能影响。所以我们需要通过ThreadLocal为每个线程单独开辟一个私有内存，使得每个线程都有一个属于自己的SimpleDateFormat对象。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThreadLocalTest01</span> </span>&#123;<br><br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;<br>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">1000</span>; i++) &#123;<br>            <span class="hljs-keyword">int</span> finalI = i;<br>            threadPool.submit(<span class="hljs-keyword">new</span> Runnable() &#123;<br>                <span class="hljs-meta">@Override</span><br>                <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span> </span>&#123;<br>                    String date = <span class="hljs-keyword">new</span> ThreadLocalTest01().date(finalI);<br>                    System.out.println(date);<br>                &#125;<br>            &#125;);<br>        &#125;<br>        threadPool.shutdown();<br><br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">date</span><span class="hljs-params">(<span class="hljs-keyword">int</span> seconds)</span> </span>&#123;<br>        String format = <span class="hljs-keyword">null</span>;<br>        Date date = <span class="hljs-keyword">new</span> Date(<span class="hljs-number">1000</span> * seconds);<br>        SimpleDateFormat dateFormat = ThreadSafeFormatter.dateFormatThreadLocal.get();<br>        <span class="hljs-keyword">return</span> dateFormat.format(date);<br><br>    &#125;<br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ExecutorService threadPool = Executors.newFixedThreadPool(<span class="hljs-number">10</span>);<br><br>&#125;<br><br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThreadSafeFormatter</span></span>&#123;<br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ThreadLocal&lt;SimpleDateFormat&gt;<br>            dateFormatThreadLocal = <span class="hljs-keyword">new</span> ThreadLocal&lt;SimpleDateFormat&gt;()&#123;<br>        <span class="hljs-meta">@Override</span><br>        <span class="hljs-function"><span class="hljs-keyword">protected</span> SimpleDateFormat <span class="hljs-title">initialValue</span><span class="hljs-params">()</span> </span>&#123;<br><br>            <span class="hljs-keyword">return</span>  <span class="hljs-keyword">new</span> SimpleDateFormat(<span class="hljs-string">&quot;yyyy-MM-dd hh:mm:ss&quot;</span>);<br>        &#125;<br>    &#125;;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h3 id="场景二：每个线程内需要保存全局变量"><a href="#场景二：每个线程内需要保存全局变量" class="headerlink" title="场景二：每个线程内需要保存全局变量"></a>场景二：每个线程内需要保存全局变量</h3><p>案例：当前用户信息需要被线程内所有方法共享</p>
+<ul>
+<li><p>一个比较繁琐的解决方法是把user作为参数层层传递，代码冗余且不易于维护</p>
+<ul>
+<li>在此基础上我们可以演进，使用Map，当发起请求，把用户信息存放到map当中，其他方法通过get获取。</li>
+</ul>
+<p>当多线程同时工作时，我们需要保证线程安全，可以用sychronized，也可以用ConcurrentHashMap，但无论用什么，都会对性能有所影响。</p>
+</li>
+<li><p>更好的办法是使用ThreadLocal，这样无需synchronized，可以在不影响性能的情况下，也无需层层传递参数，就可以保存当前线程对应的用户信息的目的。</p>
+</li>
+</ul>
+<p>示例代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThreadLocalTest02</span> </span>&#123;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title">main</span><span class="hljs-params">(String[] args)</span> </span>&#123;<br>        <span class="hljs-keyword">new</span> Service1().process();<br>    &#125;<br>&#125;<br><br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Service1</span></span>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">process</span><span class="hljs-params">()</span> </span>&#123;<br>        User user = <span class="hljs-keyword">new</span> User(<span class="hljs-string">&quot;小飞龙&quot;</span>);<br>        ThreadLocalUser.threadLocal.set(user);<br>        <span class="hljs-keyword">new</span> Service2().process();<br>    &#125;<br>&#125;<br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Service2</span></span>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">process</span><span class="hljs-params">()</span></span>&#123;<br>        User user = ThreadLocalUser.threadLocal.get();<br>        System.out.println(<span class="hljs-string">&quot;Service2: &quot;</span>+user.name);<br>        <span class="hljs-keyword">new</span> Service3().process();<br>    &#125;<br>&#125;<br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Service3</span></span>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">process</span><span class="hljs-params">()</span></span>&#123;<br>        User user = ThreadLocalUser.threadLocal.get();<br>        System.out.println(<span class="hljs-string">&quot;Service3: &quot;</span>+user.name);<br>    &#125;<br>&#125;<br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ThreadLocalUser</span></span>&#123;<br><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span>  ThreadLocal&lt;User&gt; threadLocal = <span class="hljs-keyword">new</span> ThreadLocal&lt;User&gt;();<br>&#125;<br><br><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">User</span> </span>&#123;<br>    <span class="hljs-keyword">protected</span> String name;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">User</span><span class="hljs-params">(String name)</span></span>&#123;<br>        <span class="hljs-keyword">this</span>.name = name;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>可以看到Service2和Service3中都获取到了Service1中设置的属性</p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101181928194.png" srcset="/img/loading.gif">
+
+<h3 id="ThreadLocal的两个作用"><a href="#ThreadLocal的两个作用" class="headerlink" title="ThreadLocal的两个作用"></a>ThreadLocal的两个作用</h3><ol>
+<li>让某个需要用到的对象在线程间隔离（每个线程都有自己的独立的对象）</li>
+<li>在任何方法中都可以轻松获取到该对象</li>
+</ol>
+<p><strong>我们可以根据共享对象的生成时机不同，选择initalValue或set来保存对象</strong></p>
+<h4 id="场景一：-initialValue"><a href="#场景一：-initialValue" class="headerlink" title="场景一： initialValue"></a>场景一： initialValue</h4><blockquote>
+<p>在ThreadLocal第一次get的时候把对象给初始化出来，对象的初始化时机可以由我们控制。</p>
+</blockquote>
+<h4 id="场景二：set"><a href="#场景二：set" class="headerlink" title="场景二：set"></a>场景二：set</h4><blockquote>
+<p>如果需要保存到ThreadLocal里的对象生成时机不由我们随意控制，例如拦截器生成的用户信息。</p>
+<p>用ThreadLocal.set()直接放到我们的ThreadLocal对象中去，以便后续使用。</p>
+</blockquote>
+<h4 id="使用ThreadLocal的好处"><a href="#使用ThreadLocal的好处" class="headerlink" title="使用ThreadLocal的好处"></a>使用ThreadLocal的好处</h4><ul>
+<li>达到线程安全</li>
+<li>不需要加锁，提高执行效率</li>
+<li>更高效的利用内存、节省开销</li>
+<li>免去传参的繁琐</li>
+</ul>
+<h3 id="ThreadLocal的主要方法"><a href="#ThreadLocal的主要方法" class="headerlink" title="ThreadLocal的主要方法"></a>ThreadLocal的主要方法</h3><p><strong>initialValue()</strong></p>
+<ol>
+<li><p>该方法会返回当前线程对应的”初始值”，这是一个延迟加载的方法，只有在调用get的时候才会触发。</p>
+<p>源码分析：</p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101184439498.png " srcset="/img/loading.gif">
+
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101184439498.png" srcset="/img/loading.gif">
+
+<p>可以看到在调用get()方法时，最终返回setInitialValue();进一步跟踪到setInitialValue方法中</p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101184514912.png " srcset="/img/loading.gif">
+
+<p>在这里我们可以看到返回的value 就是调用的 initalValue()方法。</p>
+</li>
+<li><p>当线程第一次调用get方法访问变量时，将调用此方法。</p>
+</li>
+<li><p>每个线程最多调用一次此方法，如果已经调用了remove()后，再调用get()，则可以再次调用此方法。</p>
+</li>
+<li><p>如果不重写本方法，这个方法会返回null。一般使用匿名内部类的方式来重写initialValue()方法。</p>
+</li>
+</ol>
+<p>**set()**：为这个线程设置一个新值</p>
+<p>**get()**：得到这个线程对应的value。如果是首次调用get()，则会调用initialize来得到这个值</p>
+<p>**remove()**：删除对应的这个线程的值</p>
+<h2 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h2><p>进入到Thread类的源码里，我们可以看到一个ThreadLocalMap的属性</p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101190832482.png " srcset="/img/loading.gif">
+
+<p>根据属性的名字就可以指导，这个ThreadLocalMap一定是用来存储多个ThreadLocal用的。</p>
+<p>因为我们一个线程可能拥有多个ThreadLocal对象</p>
+<p><strong>get方法</strong></p>
+<ul>
+<li><p>get方法是先取出当前线程的ThreadLocalMap</p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101191533762.png" srcset="/img/loading.gif">
+</li>
+<li><p>然后调用map.getEntry方法，把本ThreadLocal的引用作为参数传入。</p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101191508310.png" srcset="/img/loading.gif">
+</li>
+<li><p>取出map中属于ThreadLocal的value</p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101191649253.png" srcset="/img/loading.gif">
+
+</li>
+</ul>
+<p><strong>initialValue方法</strong></p>
+<ul>
+<li>没有默认实现</li>
+<li>如果 需要用initialValue方法，需要自己实现</li>
+<li>通常使用匿名内部类的方式实现</li>
+</ul>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101192024985.png" srcset="/img/loading.gif">
+
+<p><strong>remove方法</strong></p>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101192105326.png" srcset="/img/loading.gif">
+
+<ul>
+<li>首先获取到当前线程，然后作为参数传到getMap里拿到对应的ThreadLocalMap，如果不为null，执行remove方法，当前threadLocal作为Key进行删除。</li>
+</ul>
+<h3 id="ThreadLocalMap类"><a href="#ThreadLocalMap类" class="headerlink" title="ThreadLocalMap类"></a>ThreadLocalMap类</h3><ul>
+<li>ThreadLocalMap类，也就是Thread.threadLocals</li>
+<li>ThreadLocalMap类是每个线程Thread里面的变量，里面最重要的是一个键值对数组Entry[] table，可以认为是一个map,键值对：<ul>
+<li>键：这个ThreadLocal</li>
+<li>值：实际需要的成员变量</li>
+</ul>
+</li>
+<li>ThreadLocalMap处理哈希冲突是采用的线性探测法，也就是如果发生冲突，就继续寻找下一个空位置，而不是用链表拉链。</li>
+</ul>
+<h2 id="使用ThreadLocal的注意点"><a href="#使用ThreadLocal的注意点" class="headerlink" title="使用ThreadLocal的注意点"></a>使用ThreadLocal的注意点</h2><h3 id="内存泄漏问题"><a href="#内存泄漏问题" class="headerlink" title="内存泄漏问题"></a>内存泄漏问题</h3><p><strong>内存泄漏</strong> </p>
+<blockquote>
+<p>某个对象不再有用，但是占用内存却不能被回收</p>
+</blockquote>
+<img src="https://img.wclblog.top/images/深入理解ThreadLocal/image-20210101193741267.png" srcset="/img/loading.gif">
+
+<p>可以看出，在Entry中Thread是使用的弱引用，而每个value则是采用强引用。</p>
+<p>弱引用特点： 若对象只被弱引用关联，那么这个对象就可以被回收</p>
+<ul>
+<li><p>ThreadLocalMap的每个Entry都是一个对Key的弱引用，同时每个Entry包含了一个对value的强引用</p>
+</li>
+<li><p>正常情况下，当线程终止，保存在ThreadLocal里的Value会被垃圾回收器回收，因为没有强引用了。</p>
+</li>
+<li><p>但是如果线程不终止（比如，线程保持很久）那么key对应的value就不能被回收，因为有以下调用链</p>
+<p>Thread—&gt;ThreadLocalMap—&gt;Entry(key为null)—&gt;value</p>
+<ul>
+<li>因为value和Thread之间还存在这个强引用链路，所以导致value无法回收，就可能出现OOM</li>
+<li>扫描key为null的Entry，并把value设置为null</li>
+<li>如果一个ThreadLocal不被使用，就可能导致value的内存泄漏</li>
+</ul>
+</li>
+</ul>
+<p><strong>如何避免内存泄漏？（阿里规约）</strong></p>
+<ul>
+<li>调用remove方法，就会删除对应的Entry对象，可以避免内存泄漏，所以用完ThreadLocal之后就，应该调用remove方法</li>
+</ul>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/java%E5%9F%BA%E7%A1%80/">java基础</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/java%E5%9F%BA%E7%A1%80/%E5%A4%9A%E7%BA%BF%E7%A8%8B/">多线程</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/java/">java</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B/">多线程</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/01/02/%E7%BB%99%E8%81%8C%E5%9C%BA%E6%96%B0%E4%BA%BA%E7%9A%84%E5%BB%BA%E8%AE%AE/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">给职场新人的建议</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/01/01/%E7%BA%BF%E7%A8%8B%E6%B1%A0%E5%AD%A6%E4%B9%A0%E6%80%BB%E7%BB%93/">
+                        <span class="hidden-mobile">线程池学习总结</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <div id="vcomments"></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('vcomments', function() {
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', function () {
+        new Valine({
+          el: "#vcomments",
+          app_id: "Tg2ajJ6eSMKNI82wP8fRCAiY-gzGzoHsz",
+          app_key: "2ywbWiss2lw2Ho2lSNAFc01z",
+          placeholder: "说点什么",
+          path: window.location.pathname,
+          avatar: "retro",
+          meta: ["nick","mail","link"],
+          pageSize: "10",
+          lang: "zh-CN",
+          highlight: true,
+          recordIP: true,
+          serverURLs: "",
+        });
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the
+    <a target="_blank" href="https://valine.js.org" rel="nofollow noopener noopener">comments powered by Valine.</a>
+  </noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+  <div class="col-lg-7 mx-auto nopadding-x-md">
+    <div class="container custom post-custom mx-auto">
+      <img src="https://https://imgtu.com/i/6gqCWD" srcset="/img/loading.gif" class="rounded mx-auto d-block mt-5" style="width:150px; height:150px;">
+    </div>
+  </div>
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+    
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?ea866f9e8e8970fa598ac9b8a359569a";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>

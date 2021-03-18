@@ -1,0 +1,848 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="https://img.wclblog.top/avatar.jpg">
+  <link rel="icon" type="image/png" href="https://img.wclblog.top/avatar.jpg">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="魏成龙">
+  <meta name="keywords" content="">
+  <title>深入Spring源码，手撕refresh刷新逻辑 - 小飞龙</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.4.0/styles/an-old-hope.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"onlypost":false},"web_analytics":{"enable":true,"baidu":"ea866f9e8e8970fa598ac9b8a359569a","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>小飞龙</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" href="javascript:">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('https://img.wclblog.top/banner.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="深入Spring源码，手撕refresh刷新逻辑">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      魏成龙
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-01-03 12:43" pubdate>
+        2021年1月3日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      4.2k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      47
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">深入Spring源码，手撕refresh刷新逻辑</h1>
+            
+            <div class="markdown-body">
+              <div class="note note-info">
+            <p>在研究refresh方法之前呢，我们先要了解一些必要的知识</p><ul><li>PostProcessor</li><li>Aware</li><li>Spring事件驱动模型</li></ul>
+          </div>
+
+<h2 id="后置处理器PostProcessor"><a href="#后置处理器PostProcessor" class="headerlink" title="后置处理器PostProcessor"></a>后置处理器PostProcessor</h2><blockquote>
+<p>Spring框架里提供了各种PostProcessor作为容器或者Bean的后置处理器</p>
+<p>其实这些PostProcessor本身也是一种需要注册到容器里的Bean</p>
+</blockquote>
+<ul>
+<li>其里面的方法会在特定的时机被容器调用。</li>
+<li>实现不改变容器或者Bean核心逻辑的情况下对Bean进行扩展</li>
+<li>对Bean进行包装，影响其行为，修改Bean的内容</li>
+</ul>
+<h3 id="PostProcessor的种类"><a href="#PostProcessor的种类" class="headerlink" title="PostProcessor的种类"></a>PostProcessor的种类</h3><p><strong>大致分为容器级别的后置处理器以及Bean级别的后置处理器</strong></p>
+<ul>
+<li>BeanDefinitionRegistryPostProcessor</li>
+<li>BeanFactoryPostProcessor</li>
+<li>BeanPostProcessor</li>
+</ul>
+<h4 id="BeanDefinitionRegistryPostProcessor"><a href="#BeanDefinitionRegistryPostProcessor" class="headerlink" title="BeanDefinitionRegistryPostProcessor"></a>BeanDefinitionRegistryPostProcessor</h4><img src="https://img.wclblog.top/images/refresh/01.png" srcset="/img/loading.gif">
+
+<p>进入到源码里面我们可以看到BeanDefinitionRegistryPostProcessor继承自BeanFactoryPostProcessor,</p>
+<p>它本身也就是一种特殊的BeanFactoryPostProcessor</p>
+<p>里面仅提供了一个方法</p>
+<img src="https://img.wclblog.top/images/refresh/02.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>该方法接收registry参数，光看方法声明信息就可以知道，我们需要在方法体里面创建出BeanDefinition实例，通过传入的registry，将我们的BeanDefinition注册到registry里面</p>
+</blockquote>
+<h4 id="BeanPostProcessor"><a href="#BeanPostProcessor" class="headerlink" title="BeanPostProcessor"></a>BeanPostProcessor</h4><p>在BeanPostProcessor方法中主要提供了两个方法</p>
+<img src="https://img.wclblog.top/images/refresh/03.png" srcset="/img/loading.gif">
+
+<ul>
+<li><p>postProcessBeforeInitialization</p>
+<p>Bean初始化之前要做的事情</p>
+</li>
+<li><p>postProcessAfterInitialization</p>
+<p>Bean初始化之后要做的事情</p>
+</li>
+</ul>
+<h2 id="Aware"><a href="#Aware" class="headerlink" title="Aware"></a>Aware</h2><div class="note note-secondary">
+            <p>容器对Bean本身基本上无侵入的，因此Bean一般不需要了解容器的状态和直接使用容器</p><p>但是在某些情况下是需要在Bean中直接对容器进行操作的，这时候就需要在Bean中设置对容器的感知了</p><p>这便是Aware的作用</p>
+          </div>
+
+<img src="https://img.wclblog.top/images/refresh/04.png" srcset="/img/loading.gif">
+
+<p>在Aware中我们可以看到是没有任何方法的，只能当作标签来使用，所以Aware在Spring中能直接发挥作用的是其自带的继承了Aware接口的子接口。</p>
+<p>常见的Aware接口如下：</p>
+<ul>
+<li>ApplicationContextAware</li>
+<li>MessageSourceAware</li>
+<li>ApplicationEventPublisherAware</li>
+<li>BeanFactoryAware</li>
+<li>ResourceLoaderAware</li>
+<li>BeanNameAware</li>
+</ul>
+<h3 id="ApplicationContextAware"><a href="#ApplicationContextAware" class="headerlink" title="ApplicationContextAware"></a>ApplicationContextAware</h3><img src="https://img.wclblog.top/images/refresh/05.png" srcset="/img/loading.gif">
+
+<p>着这个接口里面我们可以看到它定义了一个<code>setApplicationContext</code>的方法。</p>
+<blockquote>
+<p>这个方法是让实现了该接口的Bean在容器创建这个Bean实例的时候将容器本身的实例作为参数传进来给这个Bean使用</p>
+</blockquote>
+<h3 id="BeanNameAware"><a href="#BeanNameAware" class="headerlink" title="BeanNameAware"></a>BeanNameAware</h3><img src="https://img.wclblog.top/images/refresh/06.png" srcset="/img/loading.gif">
+
+<p>在这个接口里我们也可以看到也定义了一个方法<code>setBeanName</code></p>
+<blockquote>
+<p>该方法的作用就是用来将Bean的名字传入进来供该接口的实现类使用</p>
+</blockquote>
+<p>其他的接口我们看名字也就能知道了</p>
+<p>BeanFactoryAware主要用于获取当前的BeanFactory这样就可以调用容器的服务</p>
+<p>MessageSourceAware主要用来获取MessageSource相关的文本信息</p>
+<p>ApplicationEventPublisherAware主要用来获取发布器实例来发布事件的</p>
+<p>ResourceLoadAware主要用来获取资源加载器，通过资源加载器我们可以获取外部资源文件</p>
+<h2 id="Spring事件驱动模型"><a href="#Spring事件驱动模型" class="headerlink" title="Spring事件驱动模型"></a>Spring事件驱动模型</h2><h3 id="事件"><a href="#事件" class="headerlink" title="事件"></a>事件</h3><img src="https://img.wclblog.top/images/refresh/07.png" srcset="/img/loading.gif">
+
+<ul>
+<li><p>ContextStoppedEvent</p>
+<p>容器停止后触发的事件</p>
+</li>
+<li><p>ContextRefreshedEvent</p>
+<p>容器初始化或刷新完成后触发的事件</p>
+</li>
+<li><p>ContextCloseEvent</p>
+<p>容器关闭后触发的事件</p>
+</li>
+<li><p>ContextStartedEvent</p>
+<p>容器启动后触发的事件</p>
+</li>
+</ul>
+<h3 id="事件监听器"><a href="#事件监听器" class="headerlink" title="事件监听器"></a>事件监听器</h3><img src="https://img.wclblog.top/images/refresh/08.png" srcset="/img/loading.gif">
+
+<p>在ApplicationListener中只有一个方法</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment">	 * Handle an application event.</span><br><span class="hljs-comment">	 * <span class="hljs-doctag">@param</span> event the event to respond to</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">onApplicationEvent</span><span class="hljs-params">(E event)</span></span>;<br></code></pre></div></td></tr></table></figure>
+<p>该方法是用来处理事件的</p>
+<p>Spring还实现了两个ApplicationListener的子接口，提供了事件筛选的能力。</p>
+<p>SmartApplicationListener和GenericApplicationListener均继承了Ordered接口，具备了排序的能力，按照从小到大的顺序给监听器一个优先级，从而保证执行的顺序</p>
+<h3 id="事件发布器"><a href="#事件发布器" class="headerlink" title="事件发布器"></a>事件发布器</h3><blockquote>
+<p>通过事件发布器，Spring便具备了事件发布的能力</p>
+</blockquote>
+<h4 id="ApplicationEventPublisher"><a href="#ApplicationEventPublisher" class="headerlink" title="ApplicationEventPublisher"></a>ApplicationEventPublisher</h4><img src="https://img.wclblog.top/images/refresh/09.png" srcset="/img/loading.gif">
+
+<p>这个接口只提供了两个方法，均和事件发布相关，也就是说我们这个接口只能用于发布事件</p>
+<h4 id="ApplicationEventMulticaster"><a href="#ApplicationEventMulticaster" class="headerlink" title="ApplicationEventMulticaster"></a>ApplicationEventMulticaster</h4><img src="https://img.wclblog.top/images/refresh/10.png" srcset="/img/loading.gif">
+
+<p>这个接口提供了添加删除ApplicationListener的方法同时还提供了发布事件的方法</p>
+<p>看一下ApplicationEventMulticaster主要的家族成员</p>
+<img src="https://img.wclblog.top/images/refresh/11.png" srcset="/img/loading.gif">
+
+<p>提供了AbstractApplicationEventMulticaster作为其默认实现</p>
+<p>在该类中提供了一个<code>defaultRetriever</code>的成员变量，他是用来保存注册进来的Listener的</p>
+<p>因为AbstractApplicationEventMulticaster仅是抽象类如果本地没有AbstractApplicationEventMulticaster的实现就会使用默认的SimpleApplicationEventMulticaster这个实现。</p>
+<img src="https://img.wclblog.top/images/refresh/12.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>我们可以看到他有个成员变量Executor任务执行器，也就意味着它支持多线程处理监听器的方法</p>
+</blockquote>
+<p>我们看到里面一个multicastEvent方法</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-meta">@Override</span><br>	<span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">multicastEvent</span><span class="hljs-params">(<span class="hljs-keyword">final</span> ApplicationEvent event, <span class="hljs-meta">@Nullable</span> ResolvableType eventType)</span> </span>&#123;<br>		ResolvableType type = (eventType != <span class="hljs-keyword">null</span> ? eventType : resolveDefaultEventType(event));<br>		Executor executor = getTaskExecutor();<br>		<span class="hljs-keyword">for</span> (ApplicationListener&lt;?&gt; listener : getApplicationListeners(event, type)) &#123;<br>			<span class="hljs-keyword">if</span> (executor != <span class="hljs-keyword">null</span>) &#123;<br>                <span class="hljs-comment">//多线程异步调用我们提前注册好的ApplicationListener，以多线程的方式处理事件</span><br>				executor.execute(() -&gt; invokeListener(listener, event));<br>			&#125;<br>			<span class="hljs-keyword">else</span> &#123;<br>                <span class="hljs-comment">//同步挨个执行</span><br>				invokeListener(listener, event);<br>			&#125;<br>		&#125;<br>	&#125;<br></code></pre></div></td></tr></table></figure>
+<p>我们在这个方法里就可以看到，如果有executor的时候就会通过多线程的方式异步调用我们提前注册好的ApplicationListener，以多线程的方式处理事件。</p>
+<p>如果没有则同步挨个执行。</p>
+<p><strong>为什么需要ApplicationEventPublisher和ApplicationEventMulticaster</strong></p>
+<blockquote>
+<p>既然ApplicationEventMulticaster具备了所有的功能，为什么不只使用它来替代掉ApplicationEventPublisher？</p>
+</blockquote>
+<p>我们站在设计者的角度去思考，其实是很容易理解的，像我们针对于Bean和Spring容器本身就只想发布事件，并不想维护事件监听器，所以将事件源做了进一步分割，抽象出事件发布器接口，然后将ApplicationEventMulticaster作为代理让ApplicationEventPublisher的实现类去实现publishEvent()中的逻辑，而publishEvent里面就主要调用ApplicationEventMulticaster实现类里的multicastEvent方法来发布事件就可以了</p>
+<h2 id="向容器刷新逻辑发起进攻"><a href="#向容器刷新逻辑发起进攻" class="headerlink" title="向容器刷新逻辑发起进攻"></a>向容器刷新逻辑发起进攻</h2><div class="note note-danger">
+            <p>既然我们已经了解了一些前提只是，攻克了第一道防线，那么我们就正式攻克容器初始化这个逻辑</p><p>主要先进攻各类高级容器中通用的部分，即AbstractApplicationContext 中的refresh这个部分</p>
+          </div>
+
+<p>先看一下脑图</p>
+<img src="https://img.wclblog.top/images/refresh/13.png" srcset="/img/loading.gif">
+
+
+
+<p>首先我们先在第一行打一个断点：</p>
+<img src="https://img.wclblog.top/images/refresh/14.png" srcset="/img/loading.gif">
+
+<p>编写代码，通过Debug的方式启动容器</p>
+<img src="https://img.wclblog.top/images/refresh/15.png" srcset="/img/loading.gif">
+
+<p>我们就可以看到它已经停在这一步了。</p>
+<img src="https://img.wclblog.top/images/refresh/16.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>synchronized这一步主要是给容器加上同步锁，避免容器处在refresh阶段的时候别的线程还在对容器进行初始化或者销毁的操作。</p>
+</blockquote>
+<h3 id="prepareRefresh"><a href="#prepareRefresh" class="headerlink" title="prepareRefresh"></a>prepareRefresh</h3><p>执行StepOver进入下一步执行prepareRefresh的地方，该方法主要是为刷新容器做准备。我们点击StepInto进入方法里面</p>
+<img src="https://img.wclblog.top/images/refresh/17.png" srcset="/img/loading.gif">
+
+<p>该方法中</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// Switch to active.</span><br><span class="hljs-comment">//设置当前时间，也就是容器启动时间，方便后续日志记录，还有容器执行的一些统计工作</span><br><span class="hljs-keyword">this</span>.startupDate = System.currentTimeMillis();<br><span class="hljs-comment">//设置非关闭状态</span><br><span class="hljs-keyword">this</span>.closed.set(<span class="hljs-keyword">false</span>);<br><span class="hljs-comment">//设置为激活状态</span><br><span class="hljs-keyword">this</span>.active.set(<span class="hljs-keyword">true</span>);<br><span class="hljs-comment">//配置日志等级</span><br><span class="hljs-keyword">if</span> (logger.isDebugEnabled()) &#123;<br>	<span class="hljs-keyword">if</span> (logger.isTraceEnabled()) &#123;<br>		logger.trace(<span class="hljs-string">&quot;Refreshing &quot;</span> + <span class="hljs-keyword">this</span>);<br>	&#125;<br>	<span class="hljs-keyword">else</span> &#123;<br>		logger.debug(<span class="hljs-string">&quot;Refreshing &quot;</span> + getDisplayName());<br>	&#125;<br>&#125;<br><span class="hljs-comment">//初始化环境(Evironment)的propertySource属性</span><br><span class="hljs-comment">//样例: &lt;context:property-placeholder location=&quot;classpath*:/config/load.properties&quot;/&gt;</span><br>initPropertySources();<br><br><span class="hljs-comment">//校验Environment的requiredProperties是否都存在</span><br>getEnvironment().validateRequiredProperties();<br><br><span class="hljs-comment">//看看容器启动的时候是否有加载一些监听器，默认情况下earlyApplicationListeners为null</span><br><span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.earlyApplicationListeners == <span class="hljs-keyword">null</span>) &#123;<br>	<span class="hljs-keyword">this</span>.earlyApplicationListeners = <span class="hljs-keyword">new</span> LinkedHashSet&lt;&gt;(<span class="hljs-keyword">this</span>.applicationListeners);<br>&#125;<br><span class="hljs-keyword">else</span> &#123;<br>	<span class="hljs-keyword">this</span>.applicationListeners.clear();<br>	<span class="hljs-keyword">this</span>.applicationListeners.addAll(<span class="hljs-keyword">this</span>.earlyApplicationListeners);<br>&#125;<br><span class="hljs-comment">//创建事件集合</span><br><span class="hljs-keyword">this</span>.earlyApplicationEvents = <span class="hljs-keyword">new</span> LinkedHashSet&lt;&gt;();<br></code></pre></div></td></tr></table></figure>
+<p>执行完这里之后，我们就回到refresh方法里面执行下面的逻辑</p>
+<h3 id="obtainFreshBeanFactory"><a href="#obtainFreshBeanFactory" class="headerlink" title="obtainFreshBeanFactory"></a>obtainFreshBeanFactory</h3><img src="https://img.wclblog.top/images/refresh/18.png" srcset="/img/loading.gif">
+
+<p>这时候就进入到了obtainFreshBeanFactory这个方法里面，这一步主要涉及到BeanDefinition的注册</p>
+<p>这一步对于xml配置而言是非常重要的，但是对于注解而言，主要时调用了子类的refreshBeanFactory</p>
+<p>我们进入到这个方法里面</p>
+<img src="https://img.wclblog.top/images/refresh/19.png" srcset="/img/loading.gif">
+
+<p>再进入到refreshBeanFactory方法里</p>
+<img src="https://img.wclblog.top/images/refresh/20.png" srcset="/img/loading.gif">
+
+<p>我们就会发现它是一个抽象的方法，用来等待我们子类去实现的。因此我们StepInto就会进入到实际的子类里</p>
+<img src="https://img.wclblog.top/images/refresh/21.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>对于注解来讲，它实际是调用的GenericApplicationContext里面的refreshBeanFactory方法</p>
+<p>而在xml配置中调用refreshBeanFactory主要用于生成DefaultListableBeanFactory内部容器实例，然后将BeanDefinition给注册到DefaultListableBeanFactory内部容器实例上</p>
+<p>而针对于我们这里用的注解来讲，就没那么复杂了，DefaultListableBeanFactory在调用容器的构造函数时就创建出来了</p>
+</blockquote>
+<p>因此这里主要就是用于更新AnnotationApplicationContext实例的刷新状态，同时给它内部的DefaultListableBeanFactory设置上serializationId方便外部通过网络来你序列化来获取此处专属的DefaultListableBeanFactory实例</p>
+<p>我们在回到obtainFreshBeanFactory里面，此时他就返回了我们内置的DefaultListableBeanFactory实例了。</p>
+<img src="https://img.wclblog.top/images/refresh/22.png" srcset="/img/loading.gif">
+
+<h3 id="prepareBeanFactory"><a href="#prepareBeanFactory" class="headerlink" title="prepareBeanFactory"></a>prepareBeanFactory</h3><p>再StepOver返回到refresh方法里面接下来我们就来到了prepareBeanFactory方法</p>
+<img src="https://img.wclblog.top/images/refresh/23.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>此时我们就已经接受到了DefaultListableBeanFactory实例</p>
+</blockquote>
+<p>继续StepInto进入到prepareBeanFactory方法里面</p>
+<img src="https://img.wclblog.top/images/refresh/24.png" srcset="/img/loading.gif">
+
+<p>这个方法主要做了以下事情</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">prepareBeanFactory</span><span class="hljs-params">(ConfigurableListableBeanFactory beanFactory)</span> </span>&#123;<br>		<span class="hljs-comment">// Tell the internal bean factory to use the context&#x27;s class loader etc.</span><br>		<span class="hljs-comment">//告诉内部Bean工厂使用容器的类加载器</span><br>		beanFactory.setBeanClassLoader(getClassLoader());<br>		<span class="hljs-comment">//设置BeanFactory的表达式语言处理器，Spring3开始增加了对语言表达式的支持，默认可以使用#&#123;bean.xxx&#125;获取bean里面的实例值</span><br>		beanFactory.setBeanExpressionResolver(<span class="hljs-keyword">new</span> StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));<br>		<span class="hljs-comment">//为beanFactory增加一个默认的PropertyEditor</span><br>		beanFactory.addPropertyEditorRegistrar(<span class="hljs-keyword">new</span> ResourceEditorRegistrar(<span class="hljs-keyword">this</span>, getEnvironment()));<br><br>		<span class="hljs-comment">//添加后置处理器，作用是：当应用程序定义的Bean实现ApplicationContextAware接口时注入ApplicationContext对象</span><br>		beanFactory.addBeanPostProcessor(<span class="hljs-keyword">new</span> ApplicationContextAwareProcessor(<span class="hljs-keyword">this</span>));<br><br>		<span class="hljs-comment">//如果某个Bean依赖于一下某个接口的实现类，在自动装配的时候会忽略他们</span><br>		<span class="hljs-comment">//Spring会通知其他方式处理这些依赖</span><br>		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);<br>		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);<br>		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);<br>		beanFactory.ignoreDependencyInterface(ApplicationEventPublisherAware.class);<br>		beanFactory.ignoreDependencyInterface(MessageSourceAware.class);<br>		beanFactory.ignoreDependencyInterface(ApplicationContextAware.class);<br><br>		<span class="hljs-comment">//修正依赖，这里是注册一些自动装配的特殊规则，比如是BeanFactory class接口的实现类则在运行时指定为当前BeanFactory</span><br>		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);<br>		beanFactory.registerResolvableDependency(ResourceLoader.class, <span class="hljs-keyword">this</span>);<br>		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, <span class="hljs-keyword">this</span>);<br>		beanFactory.registerResolvableDependency(ApplicationContext.class, <span class="hljs-keyword">this</span>);<br><br>		<span class="hljs-comment">//注册早期后置处理器，用于检测内部bean作为应用程序的监听器</span><br>		<span class="hljs-comment">//ApplicationListenerDetector的作用就是判断某个Bean是否是ApplicationListener</span><br>		<span class="hljs-comment">//如果是，加入到事件监听者队列</span><br>		beanFactory.addBeanPostProcessor(<span class="hljs-keyword">new</span> ApplicationListenerDetector(<span class="hljs-keyword">this</span>));<br><br>		<span class="hljs-comment">// 如果找到一个LoadTimeWeaver，那么就将准备后置处理器“织入”bean工厂</span><br>		<span class="hljs-keyword">if</span> (beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) &#123;<br>			beanFactory.addBeanPostProcessor(<span class="hljs-keyword">new</span> LoadTimeWeaverAwareProcessor(beanFactory));<br>			<span class="hljs-comment">// 为类型匹配设置临时类加载器</span><br>			beanFactory.setTempClassLoader(<span class="hljs-keyword">new</span> ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));<br>		&#125;<br><br>		<span class="hljs-comment">// 注册默认environment环境bean</span><br>		<span class="hljs-keyword">if</span> (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) &#123;<br>			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());<br>		&#125;<br>		<span class="hljs-keyword">if</span> (!beanFactory.containsLocalBean(SYSTEM_PROPERTIES_BEAN_NAME)) &#123;<br>			beanFactory.registerSingleton(SYSTEM_PROPERTIES_BEAN_NAME, getEnvironment().getSystemProperties());<br>		&#125;<br>		<span class="hljs-keyword">if</span> (!beanFactory.containsLocalBean(SYSTEM_ENVIRONMENT_BEAN_NAME)) &#123;<br>			beanFactory.registerSingleton(SYSTEM_ENVIRONMENT_BEAN_NAME, getEnvironment().getSystemEnvironment());<br>		&#125;<br>	&#125;<br></code></pre></div></td></tr></table></figure>
+<h3 id="postProcessBeanFactory"><a href="#postProcessBeanFactory" class="headerlink" title="postProcessBeanFactory"></a>postProcessBeanFactory</h3><p>我们再回到refresh方法里面进入到postProcessBeanFactory方法中。</p>
+<img src="https://img.wclblog.top/images/refresh/25.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>该方法用于允许容器注册必要的postProcess，是一个钩子方法。</p>
+<p>钩子方法就是子类可以实现也可以不实现</p>
+</blockquote>
+<p>我们StepInto进去</p>
+<img src="https://img.wclblog.top/images/refresh/26.png" srcset="/img/loading.gif">
+
+<p>就会发现针对于本容器而言是不需要注册子类的PostProcessor的</p>
+<h3 id="invokeBeanFactoryPostProcessors"><a href="#invokeBeanFactoryPostProcessors" class="headerlink" title="invokeBeanFactoryPostProcessors"></a>invokeBeanFactoryPostProcessors</h3><p>继续往下执行，就来到了invokeBeanFactoryPostProcessors这个方法中</p>
+<img src="https://img.wclblog.top/images/refresh/27.png" srcset="/img/loading.gif">
+
+<p>这个方法的主要作用是注册容器级别的PostProcessor</p>
+<h3 id="registerBeanPostProcessors"><a href="#registerBeanPostProcessors" class="headerlink" title="registerBeanPostProcessors"></a>registerBeanPostProcessors</h3><p>我们继续往下执行，就会来到registerBeanPostProcessors这个方法中</p>
+<p>完成容器级别的后置处理器之后就是Bean级别的后置处理器了。</p>
+<div class="note note-info">
+            <p>registerBeanPostProcessors这一步就是将先前定义的bean级别的后置处理器注册到容器里，方便后续再调用getBean方法创建Bean实例的时候，在特定的各个环节去触发这些后置处理器，执行一些特定的逻辑。</p><p>有了这种Bean级别的后置处理器，就方便于我们对于Bean进行精细化以及自定义管理。</p>
+          </div>
+
+<h3 id="initMessageSource"><a href="#initMessageSource" class="headerlink" title="initMessageSource"></a>initMessageSource</h3><p>再往下就进入到了initMessageSource方法</p>
+<img src="https://img.wclblog.top/images/refresh/28.png" srcset="/img/loading.gif">
+
+<div class="note note-info">
+            <p>这里主要进行一些国际化的配置，主要的目的是针对于不同的地区去展示不同的语言内容。</p>
+          </div>
+
+<h3 id="initApplicationEventMulticaster"><a href="#initApplicationEventMulticaster" class="headerlink" title="initApplicationEventMulticaster"></a>initApplicationEventMulticaster</h3><p>这里我们就不需要过多关注了，继续往下执行就进入到了<code>initApplicationEventMulticaster();</code></p>
+<blockquote>
+<p>通过这个方法来初始化事件发布器，用来接收实现ApplicationEventPublisher接口的类发送过来的不同的事件并派发给不同的事件监听者进行处理</p>
+</blockquote>
+ <img src="https://img.wclblog.top/images/refresh/29.png" srcset="/img/loading.gif">
+
+<p>进入到这个方法里首先我们看到，它首先判断容器先前有没有注册过自定义的事件发布器，如果有直接用</p>
+<p>否则：</p>
+<img src="https://img.wclblog.top/images/refresh/30.png" srcset="/img/loading.gif">
+
+<p>就会使用就会使用默认的SimpleApplicationEventMulticaster作为事件发布器。我们StepOver</p>
+<img src="https://img.wclblog.top/images/refresh/31.png" srcset="/img/loading.gif">
+
+<p>我们可以看到果然创建了SimpleApplicationEventMulticaster去支持事件发布。</p>
+<p>执行完这里我们就创建完成了SimpleApplicationEventMulticaster，继续走，又回到了refresh方法中。</p>
+<h3 id="onRefresh"><a href="#onRefresh" class="headerlink" title="onRefresh"></a>onRefresh</h3><p>紧接着执行到了<code>onRefresh()</code>方法</p>
+<img src="https://img.wclblog.top/images/refresh/32.png" srcset="/img/loading.gif">
+
+<div class="note note-info">
+            <p>这个方法也是一个钩子方法</p><p>这个方法主要用来预留给其子类，用于初始化其它特殊的Bean，</p><p>该方法会发生在refresh方法中的finishBeanFactoryInitialization方法之前</p><p>即发生在单例的Bean的实例化之前执行</p><p>onRefresh方法一般用于一些Web容器上</p>
+          </div>
+
+<h3 id="registerListeners"><a href="#registerListeners" class="headerlink" title="registerListeners"></a>registerListeners</h3><p>继续往下执行</p>
+<img src="https://img.wclblog.top/images/refresh/33.png" srcset="/img/loading.gif">
+
+<p>这个方法就是向我们之前的ApplicationEventMulticaster去注册监听器，用来监听不同的事件，毕竟光有事件和事件发布器还不能构成完整的事件监听机制，有了监听器就完整了。</p>
+<h3 id="finishBeanFactoryInitialization"><a href="#finishBeanFactoryInitialization" class="headerlink" title="finishBeanFactoryInitialization"></a>finishBeanFactoryInitialization</h3><p>继续往下执行便来到了<code>finishBeanFactoryInitialization</code>方法</p>
+<img src="https://img.wclblog.top/images/refresh/34.png" srcset="/img/loading.gif">
+
+<p>StepInto进入到这个方法里</p>
+<img src="https://img.wclblog.top/images/refresh/35.png" srcset="/img/loading.gif">
+
+<p>我们就会发现该方法首先会判断容器里有没有自动的类型转换器ConversionService，如果有则通过getBean从容器获取提供类型转换的Bean实例，所谓的类型转换器，就是从容器中给Bean实例赋值的时候，将属性值转换为对应的类型。</p>
+<p>只有Spring容器本身不支持的一些类型转换是需要这些转换器来处理的。</p>
+<p>因为我们这里是没有的所以我们继续往下执行便进入到这里</p>
+<img src="https://img.wclblog.top/images/refresh/36.png" srcset="/img/loading.gif">
+
+<blockquote>
+<p>这一步的目的就是网容器里注册默认的解析器，这些解析器能解析配置文件中的值，并将他们注入到被@Value注解标记或者Xml里面的配置的${}表达式里</p>
+</blockquote>
+<p>在往后就是获取LoadTimeWeaverAware编织器的bean实例以便进行类加载器的Aop操作</p>
+<img src="https://img.wclblog.top/images/refresh/37.png" srcset="/img/loading.gif">
+
+<p>继续往下执行</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 停止使用临时类加载器进行类型匹配</span><br>beanFactory.setTempClassLoader(<span class="hljs-keyword">null</span>);<br></code></pre></div></td></tr></table></figure>
+<p>然后就是停止使用临时类加载器，因为aop的操作已经完成了，不需要使用临时类加载器加载jvm生成的代理类了。</p>
+<p>再往下执行</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 允许缓存所有bean定义元数据，不希望有进一步的更改</span><br>beanFactory.freezeConfiguration();<br></code></pre></div></td></tr></table></figure>
+<p>这一步主要用于冻结容器相关的配置这一步使得保存在内存里的先前刷新好的内容变得可靠稳定了</p>
+<p>再看下一步</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">// 实例化所有剩余的（non-lazy-init非延时加载的）单例</span><br>   beanFactory.preInstantiateSingletons();<br></code></pre></div></td></tr></table></figure>
+<p>这一步就是先实例化剩余所有的默认不是延迟加载的scope为singleton的bean实例</p>
+<p>对于Spring高级容器而言，默认的bean都是singleton并且也不是延迟加载的，所以对应的bean实例就会在此处创建并管理起来</p>
+<p>我们在这一步StepInto进去</p>
+<img src="https://img.wclblog.top/images/refresh/37.png" srcset="/img/loading.gif">
+
+<p>我们就会发现它进入到的是DefaultListableBeanFactory这个类里</p>
+<img src="https://img.wclblog.top/images/refresh/38.png" srcset="/img/loading.gif">
+
+<p>跳过日志，我们来看下面的逻辑：</p>
+<img src="https://img.wclblog.top/images/refresh/39.png" srcset="/img/loading.gif">
+
+<p>首先是遍历注册好的BeanDefinition的名字，然后根据名字去过去相应的BeanDefinition实例</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);<br></code></pre></div></td></tr></table></figure>
+<p>这里通过RootBeanDefinition接受合并过后的BeanDefinition，getMergedLocalBeanDefinition这个方法调用层级比较深，分析起来比较晕，所以我们只需要记住他的作用就可以了。</p>
+<div class="note note-info">
+            <p>MergedLocalBeanDefinition的作用就是兼容各种BeanDefinition。</p>
+          </div>
+
+<p>不同的Bean在加载SpringBean定义的时候实例化出来的是GenericBeanDefinition，GenericBeanDefinition可以直接转换成RootBeanDefinition，所以对于普通的BeanDefinition这是没有问题的</p>
+<p>而对于另外一种情况，他也是支持的，就是具有继承关系的ChildBeanDefinition，他的parent会指定另外一个BeanDefinition，它就会将ChildBeanDefinition和parent  BeanDefinition的属性给合并到一起，也可以转成RootBeanDefinition并返回。所以为了兼容原先的ChildBeanDefinition，这里用RootBeanDifition是合理的。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-keyword">if</span> (!bd.isAbstract() &amp;&amp; bd.isSingleton() &amp;&amp; !bd.isLazyInit()) &#123;<br>       <span class="hljs-keyword">if</span> (isFactoryBean(beanName)) &#123;<br>				Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);<br>				<span class="hljs-keyword">if</span> (bean <span class="hljs-keyword">instanceof</span> FactoryBean) &#123;<br>					<span class="hljs-keyword">final</span> FactoryBean&lt;?&gt; factory = (FactoryBean&lt;?&gt;) bean;<br>					<span class="hljs-keyword">boolean</span> isEagerInit;<br>					<span class="hljs-keyword">if</span> (System.getSecurityManager() != <span class="hljs-keyword">null</span> <br>                           &amp;&amp; factory <span class="hljs-keyword">instanceof</span> SmartFactoryBean) &#123;<br>						isEagerInit = AccessController<br>                               .doPrivileged((PrivilegedAction&lt;Boolean&gt;)<br>										((SmartFactoryBean&lt;?&gt;) factory)::isEagerInit,<br>								getAccessControlContext());<br>					&#125;<br></code></pre></div></td></tr></table></figure>
+<p>然后在这里判断，首先这个BeanDefinition实例不是抽象的，并且是单例且非延迟加载的。</p>
+<p>如果都满足的化，就开始进行实例化了</p>
+<p>然后先判断这个bean是否是FactoryBean，如果是，就会去容器里获取FactoryBean实例。</p>
+<p>如果获取到了之后，再判断FactoryBean里面的Bean是否是延迟加载的，如果不是延迟加载的话<code>isEagerInit</code>，并且相关的创建方法具有权限访问的话<code>getAccessControlContext()</code>,那么就将FactoryBean里面的Bean通过getBean给创建出来。</p>
+<img src="https://img.wclblog.top/images/refresh/40.png" srcset="/img/loading.gif">
+
+<p>这里涉及到了一个SmartFactoryBean，我们看一下这个接口。</p>
+<img src="https://img.wclblog.top/images/refresh/41.png" srcset="/img/loading.gif">
+
+<p>它可以设置实例是延迟加载还是非延迟加载。</p>
+<p>——————————————————————————————————</p>
+<p>更新中…..</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/">学习</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/%E6%A1%86%E6%9E%B6/">框架</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E5%AD%A6%E4%B9%A0/%E6%A1%86%E6%9E%B6/spring/">spring</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/spring/">spring</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E6%BA%90%E7%A0%81%E5%93%81%E8%AF%BB/">源码品读</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！</p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/01/07/%E6%B7%B1%E5%85%A5Spring%E6%BA%90%E7%A0%81%EF%BC%8C%E8%BF%9B%E6%94%BB%E4%BE%9D%E8%B5%96%E6%B3%A8%E5%85%A5%E9%80%BB%E8%BE%91/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">深入Spring源码，进攻依赖注入逻辑</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/01/02/HashMap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+                        <span class="hidden-mobile">HashMap源码分析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments">
+                
+                
+  <div id="vcomments"></div>
+  <script type="text/javascript">
+    Fluid.utils.waitElementVisible('vcomments', function() {
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', function () {
+        new Valine({
+          el: "#vcomments",
+          app_id: "Tg2ajJ6eSMKNI82wP8fRCAiY-gzGzoHsz",
+          app_key: "2ywbWiss2lw2Ho2lSNAFc01z",
+          placeholder: "说点什么",
+          path: window.location.pathname,
+          avatar: "retro",
+          meta: ["nick","mail","link"],
+          pageSize: "10",
+          lang: "zh-CN",
+          highlight: true,
+          recordIP: true,
+          serverURLs: "",
+        });
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the
+    <a target="_blank" href="https://valine.js.org" rel="nofollow noopener noopener">comments powered by Valine.</a>
+  </noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+  <div class="col-lg-7 mx-auto nopadding-x-md">
+    <div class="container custom post-custom mx-auto">
+      <img src="https://https://imgtu.com/i/6gqCWD" srcset="/img/loading.gif" class="rounded mx-auto d-block mt-5" style="width:150px; height:150px;">
+    </div>
+  </div>
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+    
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+<!-- SCRIPTS -->
+
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/debouncer.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.0/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      var inputArea = document.querySelector("#local-search-input");
+      inputArea.onclick = function () {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+        this.onclick = null
+      }
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?ea866f9e8e8970fa598ac9b8a359569a";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+
+</body>
+</html>
